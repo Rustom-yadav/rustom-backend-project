@@ -12,6 +12,6 @@ connectDB()
     });
 })
 .catch((error) => {
-    console.log("Error connecting to MongoDB:", error);
+    console.log("Error connecting to MongoDB Outer:", error);
 });
 
