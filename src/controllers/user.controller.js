@@ -4,9 +4,7 @@ import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 
-
 export const registerUser = asyncHandler(async (req, res) => {
-  
   const { userName, fullName, email, password } = req.body;
 
   if (!userName || !fullName || !email || !password) {
@@ -15,7 +13,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   // using mongoose $or operator to check if email or username already exists
   // and User is the mongoose model for the user collection in the database
   const existingUser = await User.findOne({
-    $or: [{ email }, { userName }]
+    $or: [{ email }, { userName }],
   });
 
   if (existingUser) {
@@ -24,6 +22,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
@@ -41,16 +40,101 @@ export const registerUser = asyncHandler(async (req, res) => {
     password,
     avatar: avatarUrl,
     coverImage: coverImageUrl,
-    
   });
-  const createdUser = await User.findById(user._id).select("-password -refreshToken");
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
   if (!createdUser) {
     throw new ApiError(500, "Failed to create user");
   }
 
-  
-
-  return res.status(201).json(
-    new ApiResponse(201, "User created successfully", createdUser)
-  );
+  return res
+    .status(201)
+    .json(new ApiResponse(201, "User created successfully", createdUser));
 });
+
+export const loginUser = asyncHandler(async (req, res) => {
+  const { userName, password, email } = req.body;
+
+  if (!userName || !email) {
+    throw new ApiError(400, "email or userName required");
+  }
+
+  const user = await User.findOne({
+    $or: [{ email }, { userName }],
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User does not exist");
+  }
+
+  if (!password) {
+    throw new ApiError(400, "Password is required");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid password");
+  }
+
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
+
+  // Update the user document with the refresh token
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  // Send cookies with the tokens
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+      new ApiResponse(200, "User logged in successfully", {
+        user: {
+          _id: user._id,
+          userName: user.userName,
+          email: user.email,
+          fullName: user.fullName,
+          avatar: user.avatar,
+          coverImage: user.coverImage,
+        },
+        accessToken,
+        refreshToken,
+      })
+    );
+});
+
+export const logoutUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+    
+  };  
+  
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, "User logged out successfully"));
+
+  
+});  
