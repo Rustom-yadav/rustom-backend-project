@@ -1,8 +1,8 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import { User } from "../models/user.model.js";
+import User from "../models/user.model.js";
 import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import uploadToCloudinary from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 
 const generateTokens = async(user) => {
@@ -164,7 +164,7 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(401, "Invalid refresh token");
   }
-  
+
   const user = await User.findById(decodedToken?._id);
 
   if (!user || user.refreshToken !== incomingRefreshToken) {

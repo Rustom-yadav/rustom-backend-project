@@ -1,1 +1,2 @@
-export const DB_NAME = "rustoms_db";
+const DB_NAME = "rustoms_db";
+export default DB_NAME;
