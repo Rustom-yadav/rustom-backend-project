@@ -28,9 +28,11 @@ const userSchema = new Schema(
     avatar: {
       type: String,
       required: true,
+      trim: true,
     },
     coverImage: {
       type: String,
+      trim: true,
     },
     watchHistory: [
       {
@@ -41,9 +43,11 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
+      trim: true,
     },
     refreshToken: {
       type: String,
+      trim: true,
     },
   },
   { timestamps: true }
