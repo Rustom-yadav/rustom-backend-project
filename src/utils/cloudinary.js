@@ -15,8 +15,10 @@ const uploadToCloudinary = async (filePath) => {
       resource_type: "auto",
     });
     fs.unlinkSync(filePath);// Delete the local file after uploading
-    return result.secure_url;
-
+    return {
+      secure_url: result.secure_url,
+      duration: result.duration ?? null,
+    };
   } catch (error) {
     console.error("Error uploading to Cloudinary:", error);
     fs.unlinkSync(filePath);

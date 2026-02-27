@@ -36,8 +36,10 @@ export const registerUser = asyncHandler(async (req, res) => {
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
-  const avatarUrl = await uploadToCloudinary(avatarLocalPath);
-  const coverImageUrl = await uploadToCloudinary(coverImageLocalPath);
+  const avatarResult = await uploadToCloudinary(avatarLocalPath);
+  const coverImageResult = await uploadToCloudinary(coverImageLocalPath);
+  const avatarUrl = avatarResult?.secure_url;
+  const coverImageUrl = coverImageResult?.secure_url;
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar");
@@ -246,7 +248,8 @@ export const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  const avatarUrl = await uploadToCloudinary(avatarLocalPath);
+  const avatarResult = await uploadToCloudinary(avatarLocalPath);
+  const avatarUrl = avatarResult?.secure_url;
 
   if (!avatarUrl) {
     throw new ApiError(500, "Failed to upload avatar");
@@ -274,7 +277,8 @@ export const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cover image file is required");
   }
 
-  const coverImageUrl = await uploadToCloudinary(coverImageLocalPath);
+  const coverImageResult = await uploadToCloudinary(coverImageLocalPath);
+  const coverImageUrl = coverImageResult?.secure_url;
 
   if (!coverImageUrl) {
     throw new ApiError(500, "Failed to upload cover image");
