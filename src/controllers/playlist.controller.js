@@ -52,10 +52,10 @@ export const getPlaylistById = asyncHandler(async (req, res) => {
     const { page = 1, limit: limitQuery = 20 } = req.query;
     const limit = Math.min(20, Math.max(1, Number(limitQuery) || 20));
 
-    if (!playlistId) {  
+    if (!playlistId) {
         throw new ApiError(400, "Playlist id is required");
     }
-    
+
     const playlist = await Playlist.findById(playlistId)
         .populate({
             path: "videos",
@@ -66,7 +66,7 @@ export const getPlaylistById = asyncHandler(async (req, res) => {
                 sort: { createdAt: -1 }
             }
         });
-    
+
 
     if (!playlist) {
         throw new ApiError(404, "Playlist not found");

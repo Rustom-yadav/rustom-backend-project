@@ -83,8 +83,21 @@ export const getAllVideos = asyncHandler(async (req, res) => {
 
 export const updateVideo = asyncHandler(async (req, res) => {
     const videoId = req.params.videoId;
+    const userId = req.user?._id;
+
     if (!videoId) {
         throw new ApiError(404, "Video not found");
+    }
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    const videoFound = await Video.findById(videoId);
+    if (!videoFound) {
+        throw new ApiError(404, "Video not found");
+    }
+    if (videoFound.owner.toString() !== userId.toString()) {
+        throw new ApiError(403, "You can only update your own video");
     }
 
     const allowedUpdates = ["title", "description", "isPublished"];
@@ -109,14 +122,27 @@ export const updateVideo = asyncHandler(async (req, res) => {
 });
 
 export const deleteVideo = asyncHandler(async (req, res) => {
-    const video = req.params.videoId;
-    if (!video) {
+    const videoId = req.params.videoId;
+    const userId = req.user?._id;
+
+    if (!videoId) {
         throw new ApiError(404, "Video not found");
     }
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized");
+    }
 
-    await Video.findByIdAndDelete(video);
+    const videoFound = await Video.findById(videoId);
+    if (!videoFound) {
+        throw new ApiError(404, "Video not found");
+    }
+    if (videoFound.owner.toString() !== userId.toString()) {
+        throw new ApiError(403, "You can only delete your own video");
+    }
 
-    return res.status(200).json(new ApiResponse(200, "Video deleted successfully"));
+    await Video.findByIdAndDelete(videoId);
+
+    return res.status(200).json(new ApiResponse(200, "Video deleted successfully", null));
 });
 
 export const getVideosByOwner = asyncHandler(async (req, res) => {
@@ -164,5 +190,5 @@ export const addVideoToWatchHistory = asyncHandler(async (req, res) => {
             }
         }
     );
-    return res.status(200).json(new ApiResponse(200, "Video added to watch history"));
+    return res.status(200).json(new ApiResponse(200, "Video added to watch history", null));
 });
