@@ -29,8 +29,8 @@ export const uploadVideo = asyncHandler(async (req, res) => {
     }
 
     const newVideo = await Video.create({
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         videoFile: videoResult.secure_url,
         thumbnail: thumbnailResult.secure_url,
         duration: videoResult.duration ?? 0,
