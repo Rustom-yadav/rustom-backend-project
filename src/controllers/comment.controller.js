@@ -43,7 +43,7 @@ export const addComment = asyncHandler(async (req, res) => {
 // Update own comment
 export const updateComment = asyncHandler(async (req, res) => {
     const { commentId } = req.params;
-    const { content } = req.body;
+    const { content } = req.body || {};
     const userId = req.user?._id;
 
     if (!commentId) {
