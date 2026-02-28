@@ -1,10 +1,11 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import Video from "../models/video.model.js";
+import User from "../models/user.model.js";
 import ApiError from "../utils/ApiErrors.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import uploadToCloudinary from "../utils/cloudinary.js";
-import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import mongoose from "mongoose"; 
+
 
 export const uploadVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body;
@@ -46,8 +47,8 @@ export const uploadVideo = asyncHandler(async (req, res) => {
 });
 
 export const getVideoById = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const video = await Video.findById(id).populate(
+    const { videoId } = req.params;
+    const video = await Video.findById(videoId).populate(
         "owner",
         "userName fullName avatar"
     );
@@ -55,4 +56,113 @@ export const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found");
     }
     return res.status(200).json(new ApiResponse(200, "OK", video));
+});
+
+export const getAllVideos = asyncHandler(async (req, res) => {
+
+    const { page: pageQuery = 1, limit: limitQuery = 10 } = req.query;
+    const page = Math.max(1, Number(pageQuery) || 1);
+    const limit = Math.min(20, Math.max(1, Number(limitQuery) || 10));
+
+    const videos = await Video.aggregatePaginate(
+        Video.aggregate([
+            {
+                $match: {
+                    isPublished: true
+                }
+            }
+        ]),
+        { page, limit }
+    );
+    if (!videos) {
+        throw new ApiError(404, "No videos found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, "videos page", videos));
+});
+
+export const updateVideo = asyncHandler(async (req, res) => {
+    const videoId = req.params.videoId;
+    if (!videoId) {
+        throw new ApiError(404, "Video not found");
+    }
+
+    const allowedUpdates = ["title", "description", "isPublished"];
+    const updates = {};
+    for (const key of allowedUpdates) {
+        if (req.body[key] !== undefined) {
+            updates[key] = req.body[key];
+        }
+    }
+
+    const video = await Video.findByIdAndUpdate(
+        videoId,
+        { $set: updates },
+        { new: true }
+    );
+
+    if (!video) {
+        throw new ApiError(404, "Video not found");
+    }
+
+   return res.status(200).json(new ApiResponse(200, "Video updated successfully", video));
+});
+
+export const deleteVideo = asyncHandler(async (req, res) => {
+    const video = req.params.videoId;
+    if (!video) {
+        throw new ApiError(404, "Video not found");
+    }
+
+    await Video.findByIdAndDelete(video);
+
+    return res.status(200).json(new ApiResponse(200, "Video deleted successfully"));
+});
+
+export const getVideosByOwner = asyncHandler(async (req, res) => {
+    const ownerId = req.params.ownerId;
+    const { page: pageQuery = 1, limit: limitQuery = 10 } = req.query;
+    const page = Math.max(1, Number(pageQuery) || 1);
+    const limit = Math.min(20, Math.max(1, Number(limitQuery) || 10));
+
+    if (!ownerId) {
+        throw new ApiError(404, "Owner not found");
+    }
+
+    const videos = await Video.aggregatePaginate(
+        Video.aggregate([
+            {
+                $match: { owner: new mongoose.Types.ObjectId(ownerId) }
+            }
+        ]),
+        { page, limit }
+    );
+
+    if (!videos) {
+        throw new ApiError(404, "No videos found");
+    }
+
+    return res.status(200).json(new ApiResponse(200, "Videos by owner", videos));
+});
+
+export const addVideoToWatchHistory = asyncHandler(async (req, res) => {
+    const videoId = req.params?.videoId;
+    if (!videoId) {
+        throw new ApiError(404, "Video not found");
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $addToSet: {
+                watchHistory: videoId
+            }
+        }
+    );
+    return res.status(200).json(new ApiResponse(200, "Video added to watch history"));
 });
