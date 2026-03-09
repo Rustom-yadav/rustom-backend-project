@@ -93,7 +93,7 @@ src/
 
 ```bash
 
-git clone (https://github.com/Rustom-yadav/rustom-backend-project)
+git clone (https://github.com/Rustom-yadav/rustom-backend-project.git)
 cd Rustom's-backend-project
 
 # Install dependencies
@@ -110,7 +110,7 @@ Create a `.env` file in the project root (see `.gitignore` — `.env` is not com
 |----------|-------------|----------|
 | `PORT` | Server port (default: 8000) | No |
 | `MONGO_URI` | MongoDB connection string | Yes |
-| `CORS_ORIGIN` | Allowed frontend origin (e.g. `https://yourapp.com`) | No (default `*`) |
+| `CORS_ORIGIN` | Allowed frontend origin (e.g. `https://yourapp.com`) | No |
 | `ACCESS_TOKEN_SECRET` | JWT access token secret | Yes |
 | `REFRESH_TOKEN_SECRET` | JWT refresh token secret | Yes |
 | `ACCESS_TOKEN_EXPIRES` | Access token expiry (e.g. `1d`) | Yes |

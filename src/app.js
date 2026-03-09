@@ -1,14 +1,38 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-const app = express();
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || "*",
-    credentials: true,
-}));
 
-app.use(express.json({limit: "20kb"}));
-app.use(express.urlencoded({extended: true, limit: "20kb"}));
+const app = express();
+// when fronted url is available
+/*const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(",")
+    : [];
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+};*/
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || origin) {
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"],
+  allowHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+};
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "20kb" }));
+app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
