@@ -8,7 +8,7 @@ A production-ready **Node.js / Express** REST API for a video-platform backend �
 
 | | Link |
 |---|------|
-| **🌐 Live** | [Add your live API URL here] |
+| **🌐 Live** | [Go to Live](https://rustom-backend-project.onrender.com) |
 | **📂 GitHub** | [https://github.com/Rustom-yadav/rustom-backend-project] |
 
 ---
