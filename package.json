@@ -1,10 +1,22 @@
 {
   "name": "rustom-backend-project",
   "version": "1.0.0",
-  "description": "this is my second backend project",
+  "description": "this is video streaming platform backend project",
   "keywords": [
     "javaScript",
-    "backend"
+    "backend",
+    "video streaming",
+    "nodejs",
+    "express",
+    "mongodb",
+    "cloudinary",
+    "jwt",
+    "bcrypt",
+    "cors",
+    "dotenv",
+    "multer",
+    "mongoose",
+    "mongoose-aggregate-paginate-v2"
   ],
   "license": "ISC",
   "author": "Rustom",
