@@ -61,20 +61,45 @@ export const getVideoById = asyncHandler(async (req, res) => {
 export const getAllVideos = asyncHandler(async (req, res) => {
 
     const { page: pageQuery = 1, limit: limitQuery = 10 } = req.query;
-    const page = Math.max(1, Number(pageQuery) || 1);
-    const limit = Math.min(20, Math.max(1, Number(limitQuery) || 10));
+    const page = Math.max(1, parseInt(pageQuery) || 1);
+    const limit = Math.min(20, Math.max(1, parseInt(limitQuery) || 10));
+
+    const pipeline = [
+        {
+            $match: {
+                isPublished: true
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            userName: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $unwind: "$owner"
+        }
+    ];
 
     const videos = await Video.aggregatePaginate(
-        Video.aggregate([
-            {
-                $match: {
-                    isPublished: true
-                }
-            }
-        ]),
+        Video.aggregate(pipeline),
         { page, limit }
     );
-    if (!videos) {
+    if (!videos.docs || videos.docs.length === 0) {
         throw new ApiError(404, "No videos found");
     }
 
@@ -115,7 +140,7 @@ export const updateVideo = asyncHandler(async (req, res) => {
     );
 
     if (!video) {
-        throw new ApiError(404, "Video not found");
+        throw new ApiError(404, "update faild");
     }
 
    return res.status(200).json(new ApiResponse(200, "Video updated successfully", video));
