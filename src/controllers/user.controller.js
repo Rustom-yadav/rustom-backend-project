@@ -7,11 +7,15 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 const generateTokens = async (user) => {
-  const accessToken = user.generateAccessToken();
-  const refreshToken = user.generateRefreshToken();
-  user.refreshToken = refreshToken;
-  await user.save({ validateBeforeSave: false });
-  return { accessToken, refreshToken };
+  try {
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(500, "Failed to generate tokens");
+  }
 };
 
 export const registerUser = asyncHandler(async (req, res) => {
@@ -27,7 +31,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (existingUser) {
-    throw new ApiError(400, "Email already exists");
+    throw new ApiError(400, "Email or userName already exists");
   }
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
@@ -36,14 +40,17 @@ export const registerUser = asyncHandler(async (req, res) => {
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
-  const avatarResult = await uploadToCloudinary(avatarLocalPath);
-  const coverImageResult = await uploadToCloudinary(coverImageLocalPath);
-  const avatarUrl = avatarResult?.secure_url;
-  const coverImageUrl = coverImageResult?.secure_url;
+  const [avatarResult, coverImageResult] = await Promise.all([
+    uploadToCloudinary(avatarLocalPath),
+    coverImageLocalPath ? uploadToCloudinary(coverImageLocalPath) : null,
+  ]);
 
-  if (!avatarUrl) {
-    throw new ApiError(500, "Failed to upload avatar");
+  if (!avatarResult) {
+    throw new ApiError(400, "Error while uploading avatar, try again.");
   }
+
+  const avatarUrl = avatarResult?.secure_url;
+  const coverImageUrl = coverImageResult?.secure_url || null;
 
   const user = await User.create({
     userName,
@@ -53,13 +60,15 @@ export const registerUser = asyncHandler(async (req, res) => {
     avatar: avatarUrl,
     coverImage: coverImageUrl,
   });
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-  if (!createdUser) {
+
+  if (!user) {
     throw new ApiError(500, "Failed to create user");
   }
 
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+  
   return res
     .status(201)
     .json(new ApiResponse(201, "User created successfully", createdUser));
@@ -95,6 +104,9 @@ export const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   };
   const { accessToken, refreshToken } = await generateTokens(user);
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
 
   // Send cookies with the tokens
   return res
@@ -103,14 +115,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     .cookie("refreshToken", refreshToken, options)
     .json(
       new ApiResponse(200, "User logged in successfully", {
-        user: {
-          _id: user._id,
-          userName: user.userName,
-          email: user.email,
-          fullName: user.fullName,
-          avatar: user.avatar,
-          coverImage: user.coverImage,
-        },
+        user: loggedInUser,
         accessToken,
         refreshToken,
       })
@@ -302,7 +307,7 @@ export const updateUserCoverImage = asyncHandler(async (req, res) => {
 export const getUserChannelProfile = asyncHandler(async (req, res) => {
   const userName = req.params?.username?.trim().toLowerCase() || "";
 
-  if (!userName?.trim()) {
+  if (!userName) {
     throw new ApiError(400, "userName is missing or empty");
   }
 
@@ -371,6 +376,9 @@ export const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 export const getWatchHistory = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
   const user = await User.aggregate([
     {
       $match: {
@@ -384,6 +392,10 @@ export const getWatchHistory = asyncHandler(async (req, res) => {
         foreignField: "_id",
         as: "watchHistory",
         pipeline: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: parseInt(limit) },
+        
           {
             $lookup: {
               from: "users",
