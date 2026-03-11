@@ -65,10 +65,10 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to create user");
   }
 
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
-  
+  const createdUser = user.toObject();
+  delete createdUser.password;
+  delete createdUser.refreshToken;
+
   return res
     .status(201)
     .json(new ApiResponse(201, "User created successfully", createdUser));
@@ -104,11 +104,11 @@ export const loginUser = asyncHandler(async (req, res) => {
     secure: true,
   };
   const { accessToken, refreshToken } = await generateTokens(user);
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
 
-  // Send cookies with the tokens
+  const loggedInUser = user.toObject();
+  delete loggedInUser.password;
+  delete loggedInUser.refreshToken;
+
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)

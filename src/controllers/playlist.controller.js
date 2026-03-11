@@ -90,14 +90,6 @@ export const updatePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const playlist = await Playlist.findById(playlistId);
-    if (!playlist) {
-        throw new ApiError(404, "Playlist not found");
-    }
-    if (playlist.owner.toString() !== userId.toString()) {
-        throw new ApiError(403, "You can only update your own playlist");
-    }
-
     const updates = {};
     if (name !== undefined) {
         if (typeof name !== "string" || !name.trim()) {
@@ -109,16 +101,15 @@ export const updatePlaylist = asyncHandler(async (req, res) => {
         updates.description = typeof description === "string" ? description.trim() : "";
     }
 
-    const updatedPlaylist = await Playlist.findByIdAndUpdate(
-        playlistId,
-        {
-            $set: updates
-        },
-        {
-            new: true,
-            runValidators: true,
-        }
+    const updatedPlaylist = await Playlist.findOneAndUpdate(
+        { _id: playlistId, owner: userId },
+        { $set: updates },
+        { new: true, runValidators: true }
     );
+
+    if (!updatedPlaylist) {
+        throw new ApiError(404, "Playlist not found");
+    }
 
     return res.status(200).json(
         new ApiResponse(200, "Playlist updated successfully", updatedPlaylist)
@@ -137,15 +128,14 @@ export const deletePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const playlistFound = await Playlist.findById(playlistId);
-    if (!playlistFound) {
+    const deleted = await Playlist.findOneAndDelete({
+        _id: playlistId,
+        owner: userId,
+    });
+
+    if (!deleted) {
         throw new ApiError(404, "Playlist not found");
     }
-    if (playlistFound.owner.toString() !== userId.toString()) {
-        throw new ApiError(403, "You can only delete your own playlist");
-    }
-
-    await Playlist.findByIdAndDelete(playlistId);
 
     return res.status(200).json(
         new ApiResponse(200, "Playlist deleted successfully")
@@ -201,19 +191,15 @@ export const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const playlist = await Playlist.findById(playlistId);
-    if (!playlist) {
-        throw new ApiError(404, "Playlist not found");
-    }
-    if (playlist.owner.toString() !== userId.toString()) {
-        throw new ApiError(403, "You can only remove from your own playlist");
-    }
-
-    const updatedPlaylist = await Playlist.findByIdAndUpdate(
-        playlistId,
+    const updatedPlaylist = await Playlist.findOneAndUpdate(
+        { _id: playlistId, owner: userId },
         { $pull: { videos: videoId } },
         { new: true }
     );
+
+    if (!updatedPlaylist) {
+        throw new ApiError(404, "Playlist not found");
+    }
 
     return res.status(200).json(
         new ApiResponse(200, "Video removed from playlist", updatedPlaylist)

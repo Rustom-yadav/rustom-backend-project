@@ -30,13 +30,13 @@ export const addComment = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to add comment");
     }
 
-    const commentWithOwner = await Comment.findById(comment._id).populate(
+    await Comment.populate(
         "owner",
         "userName fullName avatar"
     );
 
     return res.status(201).json(
-        new ApiResponse(201, "Comment added successfully", commentWithOwner)
+        new ApiResponse(201, "Comment added successfully", comment)
     );
 });
 
@@ -56,24 +56,15 @@ export const updateComment = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-        throw new ApiError(404, "Comment not found");
-    }
-    if (comment.owner.toString() !== userId.toString()) {
-        throw new ApiError(403, "You can only edit your own comment");
-    }
-
-    await Comment.findByIdAndUpdate(
-        commentId,
+    const updatedComment = await Comment.findOneAndUpdate(
+        { _id: commentId, owner: userId },
         { $set: { content: content.trim() } },
         { new: true }
-    );
+    ).populate("owner", "userName fullName avatar");
 
-    const updatedComment = await Comment.findById(commentId).populate(
-        "owner",
-        "userName fullName avatar"
-    );
+    if (!updatedComment) {
+        throw new ApiError(404, "Comment not found");
+    }
 
     return res.status(200).json(
         new ApiResponse(200, "Comment updated successfully", updatedComment)
@@ -92,15 +83,14 @@ export const deleteComment = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) {
-        throw new ApiError(404, "Comment not found");
-    }
-    if (comment.owner.toString() !== userId.toString()) {
-        throw new ApiError(403, "You can only delete your own comment");
-    }
+    const deleted = await Comment.findOneAndDelete({
+        _id: commentId,
+        owner: userId,
+    });
 
-    await Comment.findByIdAndDelete(commentId);
+    if (!deleted) {
+        throw new ApiError(404, "Comment not deleted");
+    }
 
     return res.status(200).json(
         new ApiResponse(200, "Comment deleted successfully")
